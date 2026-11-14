@@ -1,0 +1,72 @@
+name: Publicar documentación Deno en GitHub Pages
+
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Verificar ejercicios TypeScript
+        shell: bash
+        run: find . -name "*.task.ts" -print0 | xargs -0 -n1 deno check
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Preparar página de documentación
+        run: |
+          mkdir -p pages
+          cat > pages/index.html <<'EOF'
+          <!doctype html>
+          <html lang="es">
+            <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Taller Uceva Deno</title></head>
+            <body>
+              <main>
+                <h1>Taller Uceva Deno - Patrones de diseño</h1>
+                <p>Ejercicios de patrones creacionales, estructurales y de comportamiento en TypeScript.</p>
+                <h2>Patrones incluidos</h2>
+                <p>Builder, Factory Method, Abstract Factory, Adapter, Facade, Flyweight, Chain of Responsibility, Memento, Observer y Strategy.</p>
+                <p>Los ejercicios se ejecutan con Deno desde la consola; esta página sirve como documentación publicada.</p>
+                <a href="https://github.com/Angie-Natalia-Cobo-Vasquez/Taller-Uceva-Deno-Design-Patterns">Ver repositorio</a>
+              </main>
+            </body>
+          </html>
+          EOF
+
+      - name: Subir artefacto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./pages
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Desplegar documentación
+        id: deployment
+        uses: actions/deploy-pages@v4
